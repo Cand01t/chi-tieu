@@ -115,6 +115,9 @@ var AUTH = (function () {
   .chip { border:1.5px solid var(--btn); background:transparent; color:var(--ink); border-radius:12px; padding:10px 6px; font-size:14px; text-align:center; }
   .chip.on { background:var(--btn); border-color:var(--btn); color:var(--btnink); font-weight:600; }
   .row { display:flex; gap:8px; }
+  .dwrap { position:relative; flex:1; min-width:0; display:block; }
+  .dwrap input[type=date] { position:absolute; inset:0; width:100%; height:100%; opacity:0; padding:0; border:0; }
+  .dtxt { display:block; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:15px; background:var(--field); color:var(--ink); white-space:nowrap; }
   input[type=date], input.note, select.note { flex:1; min-width:0; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:15px; background:var(--field); color:var(--ink); }
   .save { width:100%; margin-top:12px; border:none; border-radius:12px; padding:14px; font-size:17px; font-weight:600; background:var(--btn); color:var(--btnink); }
   .save:disabled { opacity:.5; }
@@ -184,7 +187,7 @@ var AUTH = (function () {
     </div>
     <div class="row" style="align-items:center">
       <span class="muted" style="white-space:nowrap">Ngày chi</span>
-      <input type="date" id="date">
+      <label class="dwrap"><span class="dtxt" id="dateTxt"></span><input type="date" id="date"></label>
       <button class="dbtn" id="dToday">Hôm nay</button><button class="dbtn" id="dYest">Hôm qua</button>
     </div>
     <div class="row" style="margin-top:8px">
@@ -312,8 +315,13 @@ var AUTH = (function () {
     var d = new Date(); d.setDate(d.getDate() + days);
     return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   }
-  $('dToday').onclick = function () { $('date').value = isoOffset(0); };
-  $('dYest').onclick = function () { $('date').value = isoOffset(-1); };
+  /* Hiện ngày dạng dd/mm/yyyy (ô chọn ngày gốc của điện thoại nằm ẩn bên dưới) */
+  function showDate() { var v = $('date').value, p = v.split('-'); $('dateTxt').textContent = p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : 'Chọn ngày'; }
+  $('date').addEventListener('input', showDate); $('date').addEventListener('change', showDate);
+  $('date').addEventListener('click', function () { try { this.showPicker(); } catch (e) {} });
+  $('dToday').onclick = function () { $('date').value = isoOffset(0); showDate(); };
+  $('dYest').onclick = function () { $('date').value = isoOffset(-1); showDate(); };
+  showDate();
   document.querySelectorAll('.chip').forEach(function (b) {
     b.onclick = function () {
       document.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('on'); });
@@ -331,7 +339,7 @@ var AUTH = (function () {
     try { fillHealth(s); } catch (e) {}
     try { fillTravel(s); } catch (e) {}
     $('month').textContent = s.month + ' · ngày ' + s.day + '/' + s.days;
-    if (!$('date').value) $('date').value = s.todayISO;
+    if (!$('date').value) { $('date').value = s.todayISO; showDate(); }
 
     var a = s.assets || {};
     if (a.missing) { $('asav').textContent = '–'; $('asub').textContent = 'Chưa có sheet “Tổng quan”. Nhập file So-tiet-kiem.xlsx vào Sheet này: Tệp → Nhập → Tải lên → Chèn trang tính mới.'; }

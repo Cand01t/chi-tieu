@@ -1,5 +1,5 @@
 /* Lưu sẵn giao diện để app mở nhanh; dữ liệu luôn lấy mới từ Google Sheets */
-var CACHE = 'chitieu-v3';
+var CACHE = 'chitieu-v4';
 var SHELL = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); })); self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
