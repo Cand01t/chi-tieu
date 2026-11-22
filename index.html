@@ -8,23 +8,50 @@
 <link rel="icon" href="icon-192.png">
 <title>Chi tiêu</title>
 <script>
-/* ==== Cầu nối: thay google.script.run bằng gọi API Apps Script ==== */
-var API_URL = 'https://script.google.com/macros/s/AKfycbxTkWkTBwqZ7I315agndeRlEAOuh4_GYXHC7-8wE0f-aSQQRpQgMZCCKSu3i_G8xRADjQ/exec';   // ví dụ https://script.google.com/macros/s/AKfy.../exec
-(function () {
-  function token() {
-    var t = localStorage.getItem('apiToken');
-    if (!t) { t = (prompt('Nhập mã truy cập (lấy từ createApiToken):') || '').trim(); if (t) localStorage.setItem('apiToken', t); }
-    return t;
+/* ==== Cài đặt: điền 2 dòng này ==== */
+var API_URL   = 'https://script.google.com/macros/s/AKfycbxTkWkTBwqZ7I315agndeRlEAOuh4_GYXHC7-8wE0f-aSQQRpQgMZCCKSu3i_G8xRADjQ/exec';     // https://script.google.com/macros/s/AKfy.../exec
+var CLIENT_ID = '417472649909-md591neu9olhb9sfckjueih2s83qr1at.apps.googleusercontent.com';       // 1234-abc.apps.googleusercontent.com
+
+/* ==== Đăng nhập Google + cầu nối thay google.script.run ==== */
+var AUTH = (function () {
+  var tok = null, exp = 0, waiters = [], ready = false, asked = false, gateTimer = null;
+  try { tok = localStorage.getItem('gTok'); exp = Number(localStorage.getItem('gExp')) || 0; } catch (e) {}
+  function valid() { return tok && exp - Date.now() > 120000; }
+  function gate(show) { var g = document.getElementById('gGate'); if (g) g.style.display = show ? 'flex' : 'none'; }
+  function onCred(r) {
+    tok = r.credential;
+    var p = JSON.parse(decodeURIComponent(escape(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))));
+    exp = p.exp * 1000;
+    try { localStorage.setItem('gTok', tok); localStorage.setItem('gExp', String(exp)); } catch (e) {}
+    clearTimeout(gateTimer); gate(false); asked = false;
+    var w = waiters; waiters = []; w.forEach(function (f) { f(tok); });
   }
-  function call(fn, args, ok, fail) {
+  function ask() {
+    if (!ready || asked) return;
+    asked = true;
+    google.accounts.id.prompt();                                   // tự đăng nhập nếu đã chọn tài khoản trước đó
+    gateTimer = setTimeout(function () { if (waiters.length) gate(true); }, 1500);   // không tự được thì hiện nút
+  }
+  return {
+    get: function () { return valid() ? Promise.resolve(tok) : new Promise(function (res) { waiters.push(res); ask(); }); },
+    clear: function () { tok = null; exp = 0; try { localStorage.removeItem('gTok'); } catch (e) {} },
+    init: function () {
+      google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCred, auto_select: true, use_fedcm_for_prompt: true });
+      google.accounts.id.renderButton(document.getElementById('gBtn'), { theme: 'filled_blue', size: 'large', shape: 'pill', text: 'signin_with', locale: 'vi' });
+      ready = true;
+      if (waiters.length) ask();
+    }
+  };
+})();
+(function () {
+  function call(fn, args, ok, fail, retried) {
     fail = fail || function (e) { console.error(e); };
-    fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args, token: token() }) })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (j.error) { if (j.code === 'auth') localStorage.removeItem('apiToken'); fail({ message: j.error }); }
-        else if (ok) ok(j.result);
-      })
-      .catch(function (e) { fail({ message: 'Không kết nối được (kiểm tra mạng): ' + e.message }); });
+    AUTH.get().then(function (t) {
+      return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args, idToken: t }) });
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.code === 'auth' && !retried) { AUTH.clear(); return call(fn, args, ok, fail, true); }
+      if (j.error) fail({ message: j.error }); else if (ok) ok(j.result);
+    }).catch(function (e) { fail({ message: 'Không kết nối được (kiểm tra mạng): ' + e.message }); });
   }
   function runner(ok, fail) {
     return new Proxy({}, { get: function (_, k) {
@@ -33,10 +60,18 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbxTkWkTBwqZ7I315agndeRlEA
       return function () { call(k, Array.prototype.slice.call(arguments), ok, fail); };
     } });
   }
-  window.google = { script: { get run() { return runner(); } } };
+  window.SCRIPT_BRIDGE = { get run() { return runner(); } };
+  window.google = window.google || {}; window.google.script = window.SCRIPT_BRIDGE;
+  window.gisLoaded = function () { if (!window.google.script) window.google.script = window.SCRIPT_BRIDGE; AUTH.init(); };
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  /* Mở từ lối tắt "Ghi chi": nhảy thẳng tới ô số tiền */
+  if (/[?&]quick=1/.test(location.search)) document.addEventListener('DOMContentLoaded', function () {
+    var a = document.getElementById('amount'); if (!a) return;
+    a.scrollIntoView({ block: 'center' }); a.focus();
+  });
 })();
 </script>
+<script src="https://accounts.google.com/gsi/client" async onload="gisLoaded()"></script>
 <style>
   :root { --bg:#e4e8ee; --card:#ffffff; --field:#f2f4f7; --ink:#1d2433; --mute:#5f6878; --line:#d3d9e1;
           --btn:#1f4e78; --btnink:#ffffff; --pri:#1f4e78;
@@ -99,6 +134,13 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbxTkWkTBwqZ7I315agndeRlEA
 </style>
 </head>
 <body>
+<div id="gGate" style="display:none;position:fixed;inset:0;z-index:999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center">
+  <img src="icon-192.png" width="72" height="72" alt="" style="border-radius:16px">
+  <div style="font-size:20px;font-weight:700;color:var(--ink)">Chi tiêu</div>
+  <div style="color:var(--mute);font-size:14px">Đăng nhập bằng tài khoản Google của bạn để tiếp tục</div>
+  <div id="gBtn"></div>
+</div>
+
 <div class="wrap">
   <h1>Chi tiêu <small id="month">…</small></h1>
 
