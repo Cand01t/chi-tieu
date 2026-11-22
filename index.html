@@ -44,12 +44,28 @@ var AUTH = (function () {
   };
 })();
 (function () {
+  /* Mở app: hiện ngay dữ liệu lần trước, rồi cập nhật bản mới ở nền */
+  var pending = 0, firstLoad = true;
+  function pill(d) { pending += d; var p = document.getElementById('syncPill'); if (p) p.style.display = pending > 0 ? 'block' : 'none'; }
+  function todayISO() { var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
   function call(fn, args, ok, fail, retried) {
     fail = fail || function (e) { console.error(e); };
+    var isState = fn === 'getState' && args.length === 0, okOrig = ok;
+    if (isState && firstLoad && !retried) {
+      firstLoad = false;
+      try { var c = JSON.parse(localStorage.getItem('lastState') || 'null'); if (c && okOrig) { c.todayISO = todayISO(); setTimeout(function () { okOrig(c); }, 0); } } catch (e) {}
+    }
+    if (!retried) pill(1);
+    var done = function () { pill(-1); };
+    var ok0 = ok; ok = function (r) { done(); if (isState || (r && r.cats)) { try { localStorage.setItem('lastState', JSON.stringify(r)); } catch (e) {} } if (ok0) ok0(r); };
+    var fail0 = fail; fail = function (e) { done(); fail0(e); };
+    call2(fn, args, ok, fail, retried);
+  }
+  function call2(fn, args, ok, fail, retried) {
     AUTH.get().then(function (t) {
       return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args, idToken: t }) });
     }).then(function (r) { return r.json(); }).then(function (j) {
-      if (j.code === 'auth' && !retried) { AUTH.clear(); return call(fn, args, ok, fail, true); }
+      if (j.code === 'auth' && !retried) { AUTH.clear(); return call2(fn, args, ok, fail, true); }
       if (j.error) fail({ message: j.error }); else if (ok) ok(j.result);
     }).catch(function (e) { fail({ message: 'Không kết nối được (kiểm tra mạng): ' + e.message }); });
   }
@@ -140,6 +156,7 @@ var AUTH = (function () {
   <div style="color:var(--mute);font-size:14px">Đăng nhập bằng tài khoản Google của bạn để tiếp tục</div>
   <div id="gBtn"></div>
 </div>
+<div id="syncPill" style="display:none;position:fixed;top:10px;right:10px;z-index:998;background:var(--btn);color:#fff;font-size:12px;padding:5px 10px;border-radius:999px;box-shadow:var(--shadow)">Đang cập nhật…</div>
 
 <div class="wrap">
   <h1>Chi tiêu <small id="month">…</small></h1>
