@@ -133,6 +133,8 @@ var AUTH = (function () {
   #assetCard .tot span:first-child { font-size:12px; letter-spacing:.08em; text-transform:uppercase; opacity:.75; }
   #assetCard #asav { font:600 34px/1.05 var(--serif); letter-spacing:-.01em; color:#ffffff; }
   #assetCard .sub { color:#bfe9e3; font-size:12.5px; margin-top:8px; }
+  #assetCard .again { display:inline-block; margin-top:10px; padding:4px 10px; border-radius:999px; background:rgba(34,201,189,.22); color:#7ff0e4; font:600 13px var(--sans); }
+  #assetCard .again.neg { background:rgba(255,125,110,.18); color:#ffb3a8; }
 
   /* Nhập chi */
   .amt { width:100%; font:600 36px/1.15 var(--serif); letter-spacing:-.01em; border:none; outline:none; background:transparent; color:var(--ink); padding:4px 0 6px; border-bottom:2px dashed var(--line); }
@@ -143,8 +145,8 @@ var AUTH = (function () {
   .quick button { border:1px solid var(--line); background:var(--field); color:var(--ink); border-radius:999px; padding:6px 12px; font:500 13px var(--sans); transition:background .15s, border-color .15s; }
   .quick button:active { background:var(--btn); border-color:var(--btn); color:var(--btnink); }
   .quick button:disabled { opacity:.45; }
-  .chips { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0; }
-  .chip { border:1px solid var(--line); background:var(--field); color:var(--ink); border-radius:14px; padding:11px 6px; font:500 13.5px var(--sans); text-align:center;
+  .chips { display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:58px; gap:8px; margin:14px 0; }
+  .chip { border:1px solid var(--line); background:var(--field); color:var(--ink); border-radius:14px; padding:6px 6px; font:500 13.5px/1.2 var(--sans); text-align:center; display:flex; align-items:center; justify-content:center; height:100%;
           transition:transform .12s, background .15s, border-color .15s, box-shadow .15s; }
   .chip:active { transform:scale(.96); }
   .chip.on { background:var(--btn); border-color:var(--btn); color:var(--btnink); font-weight:700; box-shadow:0 6px 14px -6px var(--btn); }
@@ -236,7 +238,7 @@ var AUTH = (function () {
   #cats .cat.warn .top span:last-child, #cats .cat.pace .top span:last-child { color:var(--warn); }
   #cats .cat .wn { color:var(--over); font-weight:600; } #cats .cat.warn .wn, #cats .cat.pace .wn { color:var(--warn); }
   /* Tiền vào tách khỏi chip chi */
-  .chip.inlink { display:block; width:100%; margin:-4px 0 12px; text-align:left; background:transparent; border:1px dashed var(--line); color:var(--pri); padding:9px 12px; font:600 13px var(--sans); box-shadow:none; }
+  .chip.inlink { display:block; width:100%; height:auto; margin:-4px 0 12px; text-align:left; background:transparent; border:1px dashed var(--line); color:var(--pri); padding:9px 12px; font:600 13px var(--sans); box-shadow:none; }
   .chip.inlink.on { background:var(--btn); border:1px solid var(--btn); color:var(--btnink); }
   /* Quỹ gộp */
   .fund { padding:11px 0 10px; border-top:1px dashed var(--line); }
@@ -248,6 +250,26 @@ var AUTH = (function () {
   .fund .bar { margin-top:7px; }
   .fbody { display:none; margin-top:8px; }
   .fund.open .fbody { display:block; }
+
+  /* Biểu đồ tròn tab Tháng */
+  :root { --p-chi:#e8833a; --p-cd:#9b87c9; --p-quy:#1ab5aa; --p-tk:#0f5a52; }
+  @media (prefers-color-scheme: dark) { :root { --p-chi:#f0a061; --p-cd:#b3a3e0; --p-quy:#2ccfc2; --p-tk:#8fe3d9; } }
+  .pie-wrap { position:relative; width:200px; height:200px; margin:10px auto 6px; }
+  .pie-wrap path { transition:opacity .2s; }
+  .pie-mid { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+  .pie-mid b { font:600 24px/1.1 var(--serif); }
+  .pie-mid span { font-size:12px; color:var(--mute); }
+  .lg { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); font-size:14px; }
+  .lg:first-child { border-top:none; }
+  .lg i { width:12px; height:12px; border-radius:4px; flex:none; }
+  .lg .nm { flex:1; font-weight:600; } .lg .am { font-weight:600; white-space:nowrap; } .lg .pc { width:42px; text-align:right; color:var(--mute); font-size:12.5px; }
+  .lg.sub2 { padding:4px 0 4px 14px; border-top:none; font-size:13px; color:var(--ink); }
+  .lg.sub2 i { width:10px; height:10px; border-radius:3px; }
+  .lg.sub2 .nm, .lg.sub2 .am { font-weight:500; }
+  .lg.ov .nm, .lg.ov .am { color:var(--over); font-weight:600; }
+  .lg .nm em { display:block; font-style:normal; font-size:11.5px; font-weight:500; color:var(--over); }
+  .lg.grp .nm { text-transform:uppercase; letter-spacing:.06em; font-size:11.5px; color:var(--mute); }
+  .lg.grp .am { color:var(--mute); font-size:13px; }
 </style>
 </head>
 <body>
@@ -266,6 +288,7 @@ var AUTH = (function () {
   <section class="tab on" data-tab="today">
   <div class="card" id="assetCard">
     <div class="tot"><span>Tổng tài sản tích lũy</span><span id="asav">…</span></div>
+    <div class="again" id="again" style="display:none"></div>
     <div class="sub" id="asub"></div>
   </div>
 
@@ -335,6 +358,14 @@ var AUTH = (function () {
     </div>
     <div id="recent" class="muted" style="margin-top:6px">–</div>
     <button class="undo" id="undo">↶ Xóa khoản vừa nhập</button>
+  </div>
+
+  <div class="card" id="pieCard">
+    <div class="tot"><span>Tiền đi đâu</span><span id="pieMonth" class="muted" style="font-weight:500;font-size:12px"></span></div>
+    <div class="pie-wrap"><svg id="pie" viewBox="-6 -6 212 212" width="200" height="200" role="img" aria-label="Biểu đồ phân bổ"></svg>
+      <div class="pie-mid"><b id="pieTotal">–</b><span>đã dùng</span></div></div>
+    <div id="pieLegend"></div>
+    <div class="sub" style="margin-top:8px">Không gồm tiền chưa chi, phần Dự phòng chưa dùng và tiền nạp Quỹ y tế, Quỹ du lịch – hai quỹ này chỉ tính khi có khoản chi.</div>
   </div>
 
   </section>
@@ -409,7 +440,7 @@ var AUTH = (function () {
   <div class="sub" style="text-align:center;margin-top:16px;color:var(--mute)">Tác giả: Đặng Đăng Trường</div>
   </section>
 </div>
-<nav class="tabbar"><button data-t="today" class="on">Hôm nay</button><button data-t="month">Tháng</button><button data-t="funds">Quỹ &amp; Sổ</button></nav>
+<nav class="tabbar"><button data-t="today" class="on">Hôm nay</button><button data-t="month">Tháng</button><button data-t="funds">Tiết kiệm</button></nav>
 
 <script>
   var cat = null, busy = false;
@@ -514,6 +545,9 @@ var AUTH = (function () {
   function paintAsset() {
     $('asav').textContent = AS.show ? AS.v : '••••••••• đ';
     $('asub').textContent = AS.show ? AS.sub : 'Chạm để xem';
+    var g = $('again');
+    if (AS.show && AS.gain != null) { g.style.display = ''; g.textContent = 'Tháng này ' + (AS.gain >= 0 ? '+' : '−') + fmt(Math.abs(AS.gain)) + 'đ'; g.className = 'again' + (AS.gain < 0 ? ' neg' : ''); }
+    else g.style.display = 'none';
   }
   $('assetCard').addEventListener('click', function () {
     AS.show = !AS.show; paintAsset(); clearTimeout(AS.t);
@@ -587,7 +621,8 @@ var AUTH = (function () {
       if (a.savings != null) parts.push('Tiết kiệm ' + short(a.savings));
       if (a.gold != null) parts.push('Vàng ' + short(a.gold));
       if (a.gain != null) parts.push('lãi/lỗ đến nay ' + (a.gain >= 0 ? '+' : '−') + short(Math.abs(a.gain)));
-      AS.sub = (parts.length ? parts.join(' · ') + ' · ' : '') + 'cập nhật ' + a.updated;
+      AS.sub = parts.join(' · ');
+      AS.gain = a.monthGain;
     }
     paintAsset();
 
@@ -708,6 +743,7 @@ var AUTH = (function () {
     $('smNext').disabled = smIdx(smView) >= smIdx(smCur); $('smNext').style.opacity = $('smNext').disabled ? .4 : 1;
     $('undo').style.display = smView === smCur ? '' : 'none';
     $('sumIO').innerHTML = '<span style="color:var(--ok)">+' + short(smData.sumIn || 0) + '</span> · <span style="color:var(--over)">−' + short(smData.sumOut || 0) + '</span> · <span style="color:var(--pri)">→' + short(smData.sumMove || 0) + '</span>';
+    try { drawPie(smData); } catch (e) {}
     var f = $('smFilter').value;
     var list = smData.items.filter(function (r) {
       if (f === 'in') return r.income; if (f === 'out') return !r.income && !r.move; if (f === 'move') return r.move;
@@ -720,6 +756,66 @@ var AUTH = (function () {
         '<span style="white-space:nowrap;color:' + (r.income ? 'var(--ok)' : r.move ? 'var(--pri)' : 'var(--ink)') + '">' + (r.income ? '+' : r.move ? '→ ' : '−') + fmt(r.amount) + 'đ</span></div>';
     }).join('') + smFoot(f, list.length, tin, tout)
       : 'Không có khoản nào' + (f === 'all' ? '.' : ' khớp bộ lọc.');
+  }
+  /* Biểu đồ tròn: ăn uống gộp 1 khoản; hằng tháng + di chuyển + dự phòng gộp 1 khoản; các quỹ gộp 1 khoản */
+  function pieName(n) { return /^Ăn uống/.test(n) ? 'Ăn uống' : /^(Hằng tháng|Di chuyển|Dự phòng)/.test(n) ? 'Hằng tháng, di chuyển, dự phòng' : n; }
+  function drawPie(d) {
+    var lim = {};   // kế hoạch chi tháng theo khoản gộp của biểu đồ
+    (d.plan || []).forEach(function (p) { if (p.name !== 'Y tế') { var k = pieName(p.name); lim[k] = (lim[k] || 0) + p.limit; } });
+    var G = [
+      { k: 'chi', n: 'Chi tiêu', c: '--p-chi', sub: {} },
+      { k: 'cd', n: 'Cố định', c: '--p-cd', sub: {} },
+      { k: 'quy', n: 'Góp quỹ', c: '--p-quy', sub: {} },
+      { k: 'tk', n: 'Tiết kiệm', c: '--p-tk', sub: {} }
+    ], by = {}; G.forEach(function (g) { by[g.k] = g; });
+    var add = function (k, n, v) { by[k].sub[n] = (by[k].sub[n] || 0) + v; };
+    (d.items || []).forEach(function (r) {
+      if (r.income) return;
+      if (r.fixed) return add('cd', 'Cố định', r.amount);
+      if (r.move) {
+        if (/^Mở sổ/.test(r.name)) return add('tk', 'Tiết kiệm', r.amount);
+        if (/^Quỹ (y tế|du lịch)/.test(r.name)) return;   // nạp quỹ y tế / du lịch: chưa tính, chỉ tính khi chi
+        return add('quy', 'Góp quỹ', r.amount);
+      }
+      add('chi', pieName(r.name), r.amount);
+    });
+    if (d.travelSpent > 0) add('chi', 'Du lịch', d.travelSpent);
+    var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches, slices = [], tot = 0;
+    var PAL = dark ? { chi: ['#f0a061', '#ecc85e', '#e3a0c0', '#c9a07a', '#f5c4a3', '#d9d27a'], quy: ['#6fb2ef'] }
+                   : { chi: ['#e8833a', '#d9a520', '#c46a95', '#9c6b3c', '#ee9e6b', '#b5a228'], quy: ['#3b8fd4'] };
+    G.forEach(function (g) {
+      var names = Object.keys(g.sub).sort(function (p, q) { return g.sub[q] - g.sub[p]; });
+      g.total = 0; g.rows = names.map(function (n, i) {
+        var pal = PAL[g.k], col = pal ? pal[i % pal.length] : 'var(' + g.c + ')';
+        var over = g.k === 'chi' && lim[n] > 0 && g.sub[n] > lim[n] ? g.sub[n] - lim[n] : 0;
+        g.total += g.sub[n]; slices.push({ v: g.sub[n], col: col, over: over });
+        return { n: n, v: g.sub[n], col: col, over: over };
+      });
+      tot += g.total;
+    });
+    $('pieMonth').textContent = d.label.replace('Tháng ', 'T') + (smView === smCur ? ' · đến nay' : '');
+    $('pieTotal').textContent = tot ? short(tot) : '0';
+    var svg = '', a0 = -Math.PI / 2, R = 92, r0 = 62, cx = 100, cy = 100;
+    var pt = function (a, rad) { return (cx + rad * Math.cos(a)).toFixed(2) + ' ' + (cy + rad * Math.sin(a)).toFixed(2); };
+    if (!tot) svg = '<circle cx="100" cy="100" r="77" fill="none" style="stroke:var(--line)" stroke-width="30"/>';
+    slices.forEach(function (x) {
+      var frac = x.v / tot, a1 = a0 + frac * 2 * Math.PI;
+      if (frac > 0.9999) svg += '<circle cx="100" cy="100" r="77" fill="none" style="stroke:' + x.col + '" stroke-width="30"/>';
+      else {
+        var gap = Math.min(0.012, frac * Math.PI * 0.3), s0 = a0 + gap, s1 = a1 - gap, big = (s1 - s0) > Math.PI ? 1 : 0;
+        svg += '<path d="M ' + pt(s0, R) + ' A ' + R + ' ' + R + ' 0 ' + big + ' 1 ' + pt(s1, R) + ' L ' + pt(s1, r0) + ' A ' + r0 + ' ' + r0 + ' 0 ' + big + ' 0 ' + pt(s0, r0) + ' Z" style="fill:' + x.col + '"/>';
+        if (x.over) svg += '<path d="M ' + pt(s0, R + 5) + ' A ' + (R + 5) + ' ' + (R + 5) + ' 0 ' + big + ' 1 ' + pt(s1, R + 5) + '" fill="none" style="stroke:var(--over)" stroke-width="5" stroke-linecap="round"/>';
+      }
+      a0 = a1;
+    });
+    $('pie').innerHTML = svg;
+    var pc = function (v) { return tot ? Math.round(v / tot * 100) + '%' : ''; };
+    $('pieLegend').innerHTML = G.filter(function (g) { return g.total > 0; }).map(function (g) {
+      if (g.rows.length === 1 && g.rows[0].n === g.n)   // nhóm chỉ có 1 phần (Cố định, Tiết kiệm)
+        return '<div class="lg"><i style="background:' + g.rows[0].col + '"></i><span class="nm">' + g.n + '</span><span class="am">' + fmt(g.total) + 'đ</span><span class="pc">' + pc(g.total) + '</span></div>';
+      return '<div class="lg grp"><span class="nm">' + g.n + '</span><span class="am">' + fmt(g.total) + 'đ</span><span class="pc">' + pc(g.total) + '</span></div>' +
+        g.rows.map(function (r) { return '<div class="lg sub2' + (r.over ? ' ov' : '') + '"><i style="background:' + r.col + '"></i><span class="nm">' + r.n + (r.over ? '<em>vượt ' + short(r.over) + ' (kế hoạch ' + short(lim[r.n]) + ')</em>' : '') + '</span><span class="am">' + fmt(r.v) + 'đ</span><span class="pc">' + pc(r.v) + '</span></div>'; }).join('');
+    }).join('');
   }
   function smFoot(f, n, tin, tout) {
     var st = 'font-weight:600;border-top:1px solid var(--line);margin-top:4px;padding-top:8px';
