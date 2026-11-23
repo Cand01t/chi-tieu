@@ -365,7 +365,7 @@ var AUTH = (function () {
     <div class="pie-wrap"><svg id="pie" viewBox="-6 -6 212 212" width="200" height="200" role="img" aria-label="Biểu đồ phân bổ"></svg>
       <div class="pie-mid"><b id="pieTotal">–</b><span>đã dùng</span></div></div>
     <div id="pieLegend"></div>
-    <div class="sub" style="margin-top:8px">Không gồm tiền chưa chi, phần Dự phòng chưa dùng và tiền nạp Quỹ y tế, Quỹ du lịch – hai quỹ này chỉ tính khi có khoản chi.</div>
+    <div class="sub" style="margin-top:8px">Chỉ tính tiền đã chi thật. Không gồm tiền chưa chi, phần Dự phòng chưa dùng và tiền góp vào các quỹ (y tế, du lịch, HSU) – quỹ chỉ được tính khi có khoản chi.</div>
   </div>
 
   </section>
@@ -765,21 +765,23 @@ var AUTH = (function () {
     var G = [
       { k: 'chi', n: 'Chi tiêu', c: '--p-chi', sub: {} },
       { k: 'cd', n: 'Cố định', c: '--p-cd', sub: {} },
-      { k: 'quy', n: 'Góp quỹ', c: '--p-quy', sub: {} },
+      { k: 'quy', n: 'Học phí HSU', c: '--p-quy', sub: {} },
       { k: 'tk', n: 'Tiết kiệm', c: '--p-tk', sub: {} }
     ], by = {}; G.forEach(function (g) { by[g.k] = g; });
     var add = function (k, n, v) { by[k].sub[n] = (by[k].sub[n] || 0) + v; };
     (d.items || []).forEach(function (r) {
       if (r.income) return;
+      if (r.fixed && /^Học phí HSU/.test(r.name)) return add('quy', 'Học phí HSU', r.amount);   // T12: đóng thẳng 4tr
       if (r.fixed) return add('cd', 'Cố định', r.amount);
       if (r.move) {
         if (/^Mở sổ/.test(r.name)) return add('tk', 'Tiết kiệm', r.amount);
-        if (/^Quỹ (y tế|du lịch)/.test(r.name)) return;   // nạp quỹ y tế / du lịch: chưa tính, chỉ tính khi chi
-        return add('quy', 'Góp quỹ', r.amount);
+        return;   // góp/nạp quỹ (y tế, du lịch, HSU): chưa chi thật, chưa tính
       }
+      if (/^Bù thiếu học phí HSU/.test(r.note || '')) return add('quy', 'Học phí HSU', r.amount);   // phần quỹ HSU không đủ
       add('chi', pieName(r.name), r.amount);
     });
     if (d.travelSpent > 0) add('chi', 'Du lịch', d.travelSpent);
+    if (d.hsuPaid > 0) add('quy', 'Học phí HSU', d.hsuPaid);   // bấm Đóng học phí: phần quỹ trả
     var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches, slices = [], tot = 0;
     var PAL = dark ? { chi: ['#f0a061', '#ecc85e', '#e3a0c0', '#c9a07a', '#f5c4a3', '#d9d27a'], quy: ['#6fb2ef'] }
                    : { chi: ['#e8833a', '#d9a520', '#c46a95', '#9c6b3c', '#ee9e6b', '#b5a228'], quy: ['#3b8fd4'] };
