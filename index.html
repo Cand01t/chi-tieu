@@ -363,9 +363,9 @@ var AUTH = (function () {
   <div class="card" id="pieCard">
     <div class="tot"><span>Tiền đi đâu</span><span id="pieMonth" class="muted" style="font-weight:500;font-size:12px"></span></div>
     <div class="pie-wrap"><svg id="pie" viewBox="-6 -6 212 212" width="200" height="200" role="img" aria-label="Biểu đồ phân bổ"></svg>
-      <div class="pie-mid"><b id="pieTotal">–</b><span>đã dùng</span></div></div>
+      <div class="pie-mid"><b id="pieTotal">–</b><span>đã chi</span></div></div>
     <div id="pieLegend"></div>
-    <div class="sub" style="margin-top:8px">Chỉ tính tiền đã chi thật. Không gồm tiền chưa chi, phần Dự phòng chưa dùng và tiền góp vào các quỹ (y tế, du lịch, HSU) – quỹ chỉ được tính khi có khoản chi.</div>
+    <div class="sub" style="margin-top:8px">Chỉ tính tiền đã chi thật. Không gồm tiền gửi tiết kiệm, tiền góp vào các quỹ (y tế, du lịch, HSU – chỉ tính khi chi ra), tiền chưa chi và phần Dự phòng chưa dùng.</div>
   </div>
 
   </section>
@@ -765,8 +765,7 @@ var AUTH = (function () {
     var G = [
       { k: 'chi', n: 'Chi tiêu', c: '--p-chi', sub: {} },
       { k: 'cd', n: 'Cố định', c: '--p-cd', sub: {} },
-      { k: 'quy', n: 'Học phí HSU', c: '--p-quy', sub: {} },
-      { k: 'tk', n: 'Tiết kiệm', c: '--p-tk', sub: {} }
+      { k: 'quy', n: 'Học phí HSU', c: '--p-quy', sub: {} }
     ], by = {}; G.forEach(function (g) { by[g.k] = g; });
     var add = function (k, n, v) { by[k].sub[n] = (by[k].sub[n] || 0) + v; };
     (d.items || []).forEach(function (r) {
@@ -774,7 +773,6 @@ var AUTH = (function () {
       if (r.fixed && /^Học phí HSU/.test(r.name)) return add('quy', 'Học phí HSU', r.amount);   // T12: đóng thẳng 4tr
       if (r.fixed) return add('cd', 'Cố định', r.amount);
       if (r.move) {
-        if (/^Mở sổ/.test(r.name)) return add('tk', 'Tiết kiệm', r.amount);
         return;   // góp/nạp quỹ (y tế, du lịch, HSU): chưa chi thật, chưa tính
       }
       if (/^Bù thiếu học phí HSU/.test(r.note || '')) return add('quy', 'Học phí HSU', r.amount);   // phần quỹ HSU không đủ
