@@ -240,6 +240,23 @@ var AUTH = (function () {
   /* Tiền vào tách khỏi chip chi */
   .chip.inlink { display:block; width:100%; height:auto; margin:-4px 0 12px; text-align:left; background:transparent; border:1px dashed var(--line); color:var(--pri); padding:9px 12px; font:600 13px var(--sans); box-shadow:none; }
   .chip.inlink.on { background:var(--btn); border:1px solid var(--btn); color:var(--btnink); }
+  /* Tiến độ tiết kiệm năm */
+  .sy-big { display:flex; align-items:baseline; gap:8px; margin:6px 0 10px; }
+  .sy-big b { font:600 30px/1.05 var(--serif); letter-spacing:-.01em; }
+  .sy-big span { color:var(--mute); font-size:13.5px; }
+  .sy-bar { position:relative; height:12px; border-radius:99px; background:color-mix(in srgb, var(--line) 75%, transparent); }
+  .sy-bar i { position:absolute; left:0; top:0; bottom:0; border-radius:99px; background:var(--btn); transition:width .6s cubic-bezier(.2,.7,.2,1); }
+  .sy-bar em { position:absolute; top:-4px; bottom:-4px; width:3px; margin-left:-1.5px; border-radius:2px; background:var(--ink); opacity:.75; }
+  .sy-st { margin-top:10px; font-size:13.5px; font-weight:600; }
+  .sy-st.ok { color:var(--ok); } .sy-st.bad { color:var(--over); }
+  .sy-st small { display:block; font-weight:500; color:var(--mute); font-size:12px; margin-top:2px; }
+  .sy-mo { display:grid; grid-template-columns:repeat(12,1fr); gap:4px; margin-top:12px; }
+  .sy-mo div { text-align:center; font:600 10.5px var(--sans); color:var(--mute); }
+  .sy-mo div i { display:block; height:22px; border-radius:6px; margin-bottom:3px; border:1.5px solid var(--line); background:transparent; }
+  .sy-mo div.full i { background:var(--btn); border-color:var(--btn); }
+  .sy-mo div.part i { background:linear-gradient(to top, var(--btn) var(--p), transparent var(--p)); border-color:var(--btn); }
+  .sy-mo div.miss i { border-color:var(--over); }
+  .sy-mo div.now { color:var(--ink); }
   /* Quỹ gộp */
   .fund { padding:11px 0 10px; border-top:1px dashed var(--line); }
   .fund:first-of-type { border-top:none; padding-top:4px; }
@@ -368,8 +385,21 @@ var AUTH = (function () {
     <div class="sub" style="margin-top:8px">Chỉ tính tiền đã chi thật. Không gồm tiền gửi tiết kiệm, tiền góp vào các quỹ (y tế, du lịch, HSU – chỉ tính khi chi ra), tiền chưa chi và phần Dự phòng chưa dùng.</div>
   </div>
 
+  <div class="card" id="ahCard">
+    <div class="tot"><span>Tài sản tăng/giảm</span><span class="muted" style="font-weight:500;font-size:12px">6 tháng gần nhất</span></div>
+    <div id="ahChart" style="margin-top:6px"><p class="muted">Đang tải…</p></div>
+  </div>
+
   </section>
   <section class="tab" data-tab="funds">
+  <div class="card" id="syCard">
+    <div class="tot"><span id="syTitle">Tiết kiệm năm</span><span id="syPct" class="muted" style="font-weight:600"></span></div>
+    <div class="sy-big"><b id="syDone">–</b><span id="syPlan"></span></div>
+    <div class="sy-bar"><i id="syFill"></i><em id="syMark"></em></div>
+    <div class="sy-st" id="sySt"></div>
+    <div class="sy-mo" id="syMo"></div>
+  </div>
+
   <div class="card" id="fundsCard">
     <div class="tot" style="margin-bottom:6px"><span>Quỹ</span><span class="muted" style="font-weight:500;font-size:12px">chạm để xem</span></div>
     <div class="fund" id="fdH">
@@ -440,7 +470,7 @@ var AUTH = (function () {
   <div class="sub" style="text-align:center;margin-top:16px;color:var(--mute)">Tác giả: Đặng Đăng Trường</div>
   </section>
 </div>
-<nav class="tabbar"><button data-t="today" class="on">Hôm nay</button><button data-t="month">Tháng</button><button data-t="funds">Tiết kiệm</button></nav>
+<nav class="tabbar"><button data-t="today" class="on">Hôm nay</button><button data-t="month">Thống kê</button><button data-t="funds">Tiết kiệm</button></nav>
 
 <script>
   var cat = null, busy = false;
@@ -530,11 +560,63 @@ var AUTH = (function () {
     }).catch(function (e) { toast('Lỗi đọc ảnh: ' + e.message, 'err'); });
   }
 
+  /* Biểu đồ cột: tài sản tăng/giảm 6 tháng */
+  var AH = null;
+  function drawAH(list) {
+    AH = list;
+    if (!list || !list.length) { $('ahChart').innerHTML = '<p class="muted">Chưa có dữ liệu – app bắt đầu ghi mốc tài sản từ tháng đầu tiên dùng.</p>'; return; }
+    var W = 320, H = 196, top = 24, base = 150, bw = Math.min(38, (W - 20) / list.length - 14);
+    var mx = Math.max.apply(null, list.map(function (r) { return Math.abs(r.delta); })) || 1;
+    var mp = Math.max.apply(null, list.map(function (r) { return Math.max(0, r.delta); })), mn = Math.max.apply(null, list.map(function (r) { return Math.max(0, -r.delta); }));
+    var negH = mn ? Math.max(26, (base - top) * mn / (mp + mn)) : 0, zero = base - negH, scaleUp = mp ? (zero - top) / mp : 0, scaleDn = mn ? (negH - 18) / mn : 0;
+    var step = (W - 20) / list.length, svg = '';
+    svg += '<line x1="6" x2="' + (W - 6) + '" y1="' + zero + '" y2="' + zero + '" style="stroke:var(--line)" stroke-width="1"/>';
+    list.forEach(function (r, i) {
+      var cx = 10 + step * i + step / 2, x = cx - bw / 2, v = r.delta;
+      var hgt = Math.max(2, Math.abs(v) * (v >= 0 ? scaleUp : scaleDn)), y = v >= 0 ? zero - hgt : zero;
+      var col = v >= 0 ? 'var(--btn)' : 'var(--over)';
+      svg += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + hgt + '" rx="6" style="fill:' + col + (r.current ? ';opacity:.55' : '') + '"/>';
+      var ly = v >= 0 ? y - 7 : y + hgt + 14;
+      svg += '<text x="' + cx + '" y="' + ly + '" text-anchor="middle" style="fill:' + (v >= 0 ? 'var(--ink)' : 'var(--over)') + ';font:600 11.5px var(--sans)">' + (v >= 0 ? '+' : '−') + short(Math.abs(v)) + '</text>';
+      svg += '<text x="' + cx + '" y="' + (H - 32) + '" text-anchor="middle" style="fill:var(--ink);font:600 12px var(--sans)">T' + Number(r.month.substr(1, 2)) + (r.current ? '*' : '') + '</text>';
+      svg += '<text x="' + cx + '" y="' + (H - 16) + '" text-anchor="middle" style="fill:var(--mute);font:500 10.5px var(--sans)">' + short(r.end) + '</text>';
+    });
+    $('ahChart').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Tài sản tăng giảm 6 tháng">' + svg + '</svg>' +
+      (list.some(function (r) { return r.current; }) ? '<div class="sub" style="margin-top:0">* tháng hiện tại, tính đến hôm nay</div>' : '');
+  }
+  function loadAH() { if (AH) return; google.script.run.withSuccessHandler(drawAH).withFailureHandler(function () { $('ahChart').innerHTML = '<p class="muted">Không tải được.</p>'; }).assetHistory(); }
+
+  /* Tiến độ tiết kiệm năm */
+  var SY = null;
+  function drawSY(d) {
+    SY = d; if (!d) return;
+    var pct = d.plan ? d.done / d.plan : 0;
+    $('syTitle').textContent = 'Tiết kiệm năm ' + d.year;
+    $('syPct').textContent = Math.round(pct * 100) + '%';
+    $('syDone').textContent = short(d.done);
+    $('syPlan').textContent = '/ ' + short(d.plan) + ' kế hoạch năm';
+    $('syFill').style.width = Math.min(100, pct * 100) + '%';
+    $('syMark').style.left = Math.min(100, d.plan ? d.expect / d.plan * 100 : 0) + '%';
+    var gap = d.done - d.expect;
+    $('sySt').className = 'sy-st ' + (gap >= 0 ? 'ok' : 'bad');
+    $('sySt').innerHTML = (Math.abs(gap) < 1000 ? 'Đúng kế hoạch ✓' : gap > 0 ? 'Đi trước kế hoạch ' + short(gap) : 'Chậm so với kế hoạch ' + short(-gap)) +
+      '<small>Kế hoạch đến nay ' + short(d.expect) + ' (vạch dọc trên thanh) · gồm phần lương tháng 13 vào tiết kiệm</small>';
+    var cm = new Date().getMonth() + 1;
+    $('syMo').innerHTML = d.months.map(function (x) {
+      var cls = x.future ? '' : x.done >= x.plan - 1000 ? 'full' : x.done > 0 ? 'part' : (x.mo < cm ? 'miss' : '');
+      var p = x.plan ? Math.min(100, Math.round(x.done / x.plan * 100)) : 0;
+      return '<div class="' + cls + (x.mo === cm ? ' now' : '') + '" style="--p:' + p + '%"><i></i>T' + x.mo + '</div>';
+    }).join('');
+  }
+  function loadSY() { if (SY) return; google.script.run.withSuccessHandler(drawSY).withFailureHandler(function () { $('sySt').textContent = 'Không tải được.'; }).savingYear(); }
+
   /* Tab dưới đáy */
   document.querySelectorAll('.tabbar button').forEach(function (b) {
     b.onclick = function () {
       document.querySelectorAll('.tabbar button').forEach(function (x) { x.classList.toggle('on', x === b); });
       document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('on', t.dataset.tab === b.dataset.t); });
+      if (b.dataset.t === 'month') loadAH();
+      if (b.dataset.t === 'funds') loadSY();
       window.scrollTo(0, 0);
     };
   });
@@ -896,7 +978,7 @@ var AUTH = (function () {
       return;
     }
     b._arm = false; busy = true;
-    google.script.run.withSuccessHandler(function (s) {
+    google.script.run.withSuccessHandler(function (s) { SY = null; setTimeout(loadSY, 0);
       busy = false; dDirty = false; $('dTerm').value = ''; $('dRate').value = ''; $('dBank').value = ''; $('dAcct').value = ''; $('dCount').checked = true;
       b.querySelector('small').textContent = 'Ghi thêm 1 dòng vào sheet “Danh mục sổ”';
       toast(s.fundMsg); render(s);
