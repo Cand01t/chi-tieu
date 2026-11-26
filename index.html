@@ -943,7 +943,7 @@ var AUTH = (function () {
     $('tbar').style.width = Math.min(100, p * 100) + '%';
     $('tbar').className = t.balance < 0 ? 'over' : '';
     var tin = (t.bonus || 0) + (t.topUp || 0);
-    $('tsub').textContent = tin ? 'Tháng này nạp vào quỹ: ' + short(tin) + (t.bonus ? ' (từ lương T13)' : ' (từ dư tháng trước)') + '.' : (t.balance >= t.target ? 'Tháng này không nạp – quỹ đã đủ ' + short(t.target) + '.' : 'Tháng này không nạp – tháng trước không có phần dư.');
+    $('tsub').textContent = tin ? 'Tháng này nạp vào quỹ: ' + short(tin) + ' (từ lương tháng 13).' : (t.balance >= t.target ? 'Tháng này không nạp – quỹ đã đủ ' + short(t.target) + '.' : 'Tháng này không nạp – quỹ chỉ nạp từ lương tháng 13 (tháng 2).');
   }
   function travelGo(type, amt, btn) {
     if (busy) return;
